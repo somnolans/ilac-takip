@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>İlaç takibi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F3F6FB; --ink:#1B2A55; --muted:#5E6B8C; --rule:#D5DDEB; --card:#FFFFFF;
+  --panto:#2F6FDE; --tetra:#E39A12; --flagyl:#23A06B; --bizmo:#B8429F;
+  --fade:.2;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#10162A; --ink:#E6ECFA; --muted:#98A3C2; --rule:#26304D; --card:#18203A;
+    --panto:#5B92F2; --tetra:#F2B23A; --flagyl:#3BC18A; --bizmo:#D765BE; --fade:.26;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#10162A; --ink:#E6ECFA; --muted:#98A3C2; --rule:#26304D; --card:#18203A;
+  --panto:#5B92F2; --tetra:#F2B23A; --flagyl:#3BC18A; --bizmo:#D765BE; --fade:.26;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding:max(16px, env(safe-area-inset-top)) 14px 24px;
+  -webkit-tap-highlight-color:transparent;
+}
+.wrap{max-width:460px;margin:0 auto}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px}
+h1{font-size:1.35rem;margin:0;font-weight:700}
+.date{color:var(--muted);font-size:.92rem;margin-top:2px}
+.count{font-size:2.1rem;font-weight:700;line-height:1;white-space:nowrap}
+.count small{font-size:1rem;color:var(--muted);font-weight:400}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.dose{
+  --c:var(--panto);
+  position:relative; border:0; cursor:pointer; text-align:left;
+  font:inherit; color:var(--ink);
+  border-radius:14px; padding:12px 12px 12px 12px; min-height:84px;
+  background:var(--card);
+  display:flex; align-items:center; gap:12px;
+  transition:transform .12s ease;
+}
+.dose::before{
+  content:""; position:absolute; inset:0; border-radius:14px;
+  background:var(--c); opacity:var(--fade); transition:opacity .2s ease;
+}
+.dose > *{position:relative}
+.dose:active{transform:scale(.97)}
+.dose:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.box{
+  flex:none; width:34px; height:34px; border-radius:8px;
+  border:2.5px solid var(--c); display:grid; place-items:center;
+  background:var(--card);
+}
+.box svg{width:22px;height:22px;opacity:0;transform:scale(.4);transition:all .18s ease}
+.time{font-size:1.25rem;font-weight:700;letter-spacing:.01em}
+.name{font-size:.95rem}
+.meal{font-size:.78rem;color:var(--muted)}
+.dose.done::before{opacity:1}
+.dose.done{color:#fff}
+.dose.done .meal{color:rgba(255,255,255,.85)}
+.dose.done .box{background:#fff;border-color:#fff}
+.dose.done .box svg{opacity:1;transform:scale(1)}
+.dose.next{box-shadow:0 0 0 2.5px var(--c)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:18px 2px 6px;font-size:.88rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.foot{font-size:.8rem;color:var(--muted);margin:10px 2px 0}
+.sync{font-size:.75rem;color:var(--muted);margin:4px 2px 0}
+@media (prefers-reduced-motion: reduce){ .dose,.dose::before,.box svg{transition:none} }
+@media (max-width:340px){ .grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Bugünkü ilaçlar</h1>
+      <div class="date" id="date"></div>
+    </div>
+    <div class="count" id="count">0<small>/10</small></div>
+  </header>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="legend">
+    <span><i style="background:var(--panto)"></i>Panto</span>
+    <span><i style="background:var(--tetra)"></i>Tetra</span>
+    <span><i style="background:var(--flagyl)"></i>Flagyl</span>
+    <span><i style="background:var(--bizmo)"></i>Bizmopen</span>
+  </div>
+  <p class="foot">Kutuya dokun: alındı. Tekrar dokun: geri al. İşaretler her gece 01:00'de sıfırlanır.</p>
+  </div>
+
+<script>
+const DOSES = [
+  {id:"d0730", t:"07:30", name:"Panto",    meal:"Aç karna", c:"--panto"},
+  {id:"d0800", t:"08:00", name:"Tetra",    meal:"Tok karna", c:"--tetra"},
+  {id:"d0810", t:"08:10", name:"Flagyl",   meal:"Tok karna", c:"--flagyl"},
+  {id:"d0940", t:"09:40", name:"Bizmopen", meal:"Tok karna", c:"--bizmo"},
+  {id:"d1400", t:"14:00", name:"Tetra",    meal:"Tok karna", c:"--tetra"},
+  {id:"d1600", t:"16:00", name:"Flagyl",   meal:"Tok karna", c:"--flagyl"},
+  {id:"d1930", t:"19:30", name:"Panto",    meal:"Aç karna", c:"--panto"},
+  {id:"d2000", t:"20:00", name:"Tetra",    meal:"Tok karna", c:"--tetra"},
+  {id:"d2130", t:"21:30", name:"Bizmopen", meal:"Tok karna", c:"--bizmo"},
+  {id:"d0000", t:"00:00", name:"Flagyl",   meal:"Tok karna", c:"--flagyl"}
+];
+const LS_KEY = "ilac-takip-v1";
+const DOC_PATH = "tracker/today";
+
+// Gün 01:00'de başlar: saatten 1 saat çıkarıp tarihe bakıyoruz
+function dayKey(d = new Date()){
+  const s = new Date(d.getTime() - 60*60*1000);
+  const p = n => String(n).padStart(2,"0");
+  return s.getFullYear()+"-"+p(s.getMonth()+1)+"-"+p(s.getDate());
+}
+// 01:00'den itibaren geçen dakika (sıralama ve "sıradaki" için)
+function minsFromOne(hhmm){
+  const [h,m] = hhmm.split(":").map(Number);
+  return ((h*60+m) - 60 + 1440) % 1440;
+}
+
+let state = {day: dayKey(), checked: []};
+
+function loadLocal(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){ const s = JSON.parse(raw); if(s && Array.isArray(s.checked)) state = s; }
+  }catch(e){}
+}
+function saveLocal(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){}
+}
+function ensureToday(){
+  const k = dayKey();
+  if(state.day !== k){ state = {day:k, checked:[]}; saveLocal(); return true; }
+  return false;
+}
+
+const grid = document.getElementById("grid");
+const check = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+
+DOSES.forEach(d => {
+  const b = document.createElement("button");
+  b.className = "dose";
+  b.dataset.id = d.id;
+  b.style.setProperty("--c", `var(${d.c})`);
+  b.innerHTML = `<span class="box" style="color:var(${d.c})">${check}</span>
+    <span><div class="time">${d.t}</div><div class="name">${d.name}</div><div class="meal">${d.meal}</div></span>`;
+  b.addEventListener("click", () => toggle(d.id));
+  grid.appendChild(b);
+});
+
+function render(){
+  const now = new Date();
+  const nowM = minsFromOne(String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0"));
+  // Sıradaki: işaretlenmemiş ilk doz (saati geçmiş olsa da)
+  const next = DOSES.find(d => !state.checked.includes(d.id));
+  document.querySelectorAll(".dose").forEach(el => {
+    const id = el.dataset.id;
+    const done = state.checked.includes(id);
+    el.classList.toggle("done", done);
+    el.classList.toggle("next", !!next && next.id === id);
+    const d = DOSES.find(x => x.id === id);
+    el.setAttribute("aria-pressed", done ? "true" : "false");
+    el.setAttribute("aria-label", `${d.t} ${d.name}, ${d.meal}, ${done ? "alındı" : "alınmadı"}`);
+  });
+  document.getElementById("count").innerHTML = state.checked.length + "<small>/10</small>";
+  const [y,m,dd] = state.day.split("-").map(Number);
+  document.getElementById("date").textContent =
+    new Date(y, m-1, dd).toLocaleDateString("tr-TR", {weekday:"long", day:"numeric", month:"long"});
+}
+
+function toggle(id){
+  ensureToday();
+  const i = state.checked.indexOf(id);
+  if(i >= 0) state.checked.splice(i,1); else state.checked.push(id);
+  state = {day: state.day, checked: [...state.checked]};
+  saveLocal();
+  render();
+}
+
+loadLocal();
+ensureToday();
+render();
+
+// Gece 01:00 sıfırlaması ve "sıradaki" vurgusu için periyodik kontrol
+setInterval(() => { ensureToday(); render(); }, 30000);
+document.addEventListener("visibilitychange", () => {
+  if(!document.hidden){ ensureToday(); render(); }
+});
+
+</script>
+</body>
+</html>
