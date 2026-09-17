@@ -85,7 +85,7 @@ h1{font-size:1.35rem;margin:0;font-weight:700}
       <h1>Bugünkü ilaçlar</h1>
       <div class="date" id="date"></div>
     </div>
-    <div class="count" id="count">0<small>/10</small></div>
+    <div class="count" id="count">0<small>/11</small></div>
   </header>
 
   <div class="grid" id="grid"></div>
@@ -101,6 +101,7 @@ h1{font-size:1.35rem;margin:0;font-weight:700}
 
 <script>
 const DOSES = [
+  {id:"d0200", t:"02:00", name:"Tetra",    meal:"Tok karna", c:"--tetra"},
   {id:"d0730", t:"07:30", name:"Panto",    meal:"Aç karna", c:"--panto"},
   {id:"d0800", t:"08:00", name:"Tetra",    meal:"Tok karna", c:"--tetra"},
   {id:"d0810", t:"08:10", name:"Flagyl",   meal:"Tok karna", c:"--flagyl"},
@@ -172,7 +173,7 @@ function render(){
     el.setAttribute("aria-pressed", done ? "true" : "false");
     el.setAttribute("aria-label", `${d.t} ${d.name}, ${d.meal}, ${done ? "alındı" : "alınmadı"}`);
   });
-  document.getElementById("count").innerHTML = state.checked.length + "<small>/10</small>";
+  document.getElementById("count").innerHTML = state.checked.length + "<small>/" + DOSES.length + "</small>";
   const [y,m,dd] = state.day.split("-").map(Number);
   document.getElementById("date").textContent =
     new Date(y, m-1, dd).toLocaleDateString("tr-TR", {weekday:"long", day:"numeric", month:"long"});
